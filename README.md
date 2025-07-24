@@ -28,7 +28,7 @@ A fully on-chain subscription protocol built on Massa Network that enables creat
 
 1. **Clone and install dependencies**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/web3sim/AutoSub.git
    cd AutoSub
    yarn install
    ```
@@ -154,6 +154,4 @@ MIT License - see LICENSE file for details
 
 ## Support
 
-- [Discord](https://discord.gg/massa)
 - [Documentation](https://docs.massa.net/)
-- [GitHub Issues](https://github.com/your-username/AutoSub/issues)
