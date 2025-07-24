@@ -1,0 +1,47 @@
+{
+  "name": "autosub",
+  "version": "1.0.0",
+  "description": "A fully on-chain subscription protocol built on Massa Network",
+  "private": true,
+  "workspaces": [
+    "contracts",
+    "frontend",
+    "scripts"
+  ],
+  "scripts": {
+    "install:all": "yarn install && yarn workspace autosub-contracts install && yarn workspace autosub-frontend install && yarn workspace autosub-scripts install",
+    "build:contracts": "yarn workspace autosub-contracts build",
+    "build:frontend": "yarn workspace autosub-frontend build",
+    "build": "yarn build:contracts && yarn build:frontend",
+    "dev:frontend": "yarn workspace autosub-frontend dev",
+    "deploy": "yarn workspace autosub-scripts deploy",
+    "clean": "yarn workspace autosub-contracts clean",
+    "lint": "yarn workspace autosub-frontend lint",
+    "lint:fix": "yarn workspace autosub-frontend lint:fix"
+  },
+  "keywords": [
+    "massa",
+    "blockchain",
+    "subscription",
+    "smart-contracts",
+    "defi",
+    "web3"
+  ],
+  "author": "AutoSub Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/AutoSub.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/AutoSub/issues"
+  },
+  "homepage": "https://github.com/your-username/AutoSub#readme",
+  "devDependencies": {
+    "prettier": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "yarn": ">=1.22.0"
+  }
+}
