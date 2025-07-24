@@ -1,0 +1,21 @@
+{
+  "targets": {
+    "debug": {
+      "outFile": "build/subscription-debug.wasm",
+      "textFile": "build/subscription-debug.wat",
+      "sourceMap": true,
+      "debug": true
+    },
+    "release": {
+      "outFile": "build/subscription.wasm",
+      "textFile": "build/subscription.wat",
+      "sourceMap": false,
+      "optimizeLevel": 3,
+      "shrinkLevel": 2,
+      "noAssert": true
+    }
+  },
+  "options": {
+    "bindings": "esm"
+  }
+}
