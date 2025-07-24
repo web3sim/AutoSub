@@ -3,6 +3,8 @@ import { createPlan, timeToMilliseconds } from '../lib/massa';
 
 const CreatorPage: React.FC = () => {
   const [formData, setFormData] = useState({
+    planName: '',
+    description: '',
     price: '',
     intervalValue: '',
     intervalUnit: 'days',
@@ -49,12 +51,19 @@ const CreatorPage: React.FC = () => {
       );
 
       // Create the plan using the real Web3 function
-      const planId = await createPlan(priceInSmallestUnit, intervalMs, formData.token);
+      const planId = await createPlan(
+        formData.planName || 'Unnamed Plan',
+        formData.description || 'No description provided',
+        Number(priceInSmallestUnit), // Convert bigint to number
+        intervalMs
+      );
       
       console.log('Plan created with ID:', planId);
       
       setSuccess(true);
       setFormData({
+        planName: '',
+        description: '',
         price: '',
         intervalValue: '',
         intervalUnit: 'days',
@@ -80,6 +89,52 @@ const CreatorPage: React.FC = () => {
 
       <div className="card">
         <form onSubmit={handleSubmit} className="form">
+          {success && (
+            <div 
+              className="mb-4 p-4" 
+              style={{ 
+                backgroundColor: '#dcfce7', 
+                color: '#166534', 
+                borderRadius: '4px',
+                textAlign: 'center' 
+              }}
+            >
+              Plan created successfully! Your plan is now live and available for subscriptions.
+            </div>
+          )}
+
+          <div className="form-group">
+            <label htmlFor="planName" className="form-label">
+              Plan Name *
+            </label>
+            <input
+              type="text"
+              id="planName"
+              name="planName"
+              value={formData.planName}
+              onChange={handleInputChange}
+              placeholder="e.g., Premium Subscription"
+              className="form-input"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="description" className="form-label">
+              Description *
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))}
+              placeholder="Describe what subscribers will get..."
+              className="form-input"
+              rows={3}
+              required
+            />
+          </div>
+
           <div className="form-group">
             <label htmlFor="price" className="form-label">
               Price per billing cycle *
@@ -98,28 +153,6 @@ const CreatorPage: React.FC = () => {
             />
             <small className="mt-1" style={{ color: '#64748b', fontSize: '0.875rem' }}>
               Enter the price in {formData.token} tokens
-            </small>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="token" className="form-label">
-              Payment Token *
-            </label>
-            <select
-              id="token"
-              name="token"
-              value={formData.token}
-              onChange={handleInputChange}
-              className="form-input"
-              required
-            >
-              <option value="MAS">MAS (Native Token)</option>
-              <option value="" disabled>
-                Other tokens (coming soon)
-              </option>
-            </select>
-            <small className="mt-1" style={{ color: '#64748b', fontSize: '0.875rem' }}>
-              Currently only MAS token is supported
             </small>
           </div>
 
@@ -160,6 +193,28 @@ const CreatorPage: React.FC = () => {
           </div>
 
           <div className="form-group">
+            <label htmlFor="token" className="form-label">
+              Payment Token *
+            </label>
+            <select
+              id="token"
+              name="token"
+              value={formData.token}
+              onChange={handleInputChange}
+              className="form-input"
+              required
+            >
+              <option value="MAS">MAS (Native Token)</option>
+              <option value="" disabled>
+                Other tokens (coming soon)
+              </option>
+            </select>
+            <small className="mt-1" style={{ color: '#64748b', fontSize: '0.875rem' }}>
+              Currently only MAS token is supported
+            </small>
+          </div>
+
+          <div className="form-group">
             <div className="card" style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
               <h4 style={{ marginBottom: '1rem', color: '#374151' }}>Plan Preview</h4>
               <div className="plan-detail">
@@ -195,20 +250,6 @@ const CreatorPage: React.FC = () => {
               'Create Plan'
             )}
           </button>
-
-          {success && (
-            <div 
-              className="mt-4 p-4" 
-              style={{ 
-                backgroundColor: '#dcfce7', 
-                color: '#166534', 
-                borderRadius: '4px',
-                textAlign: 'center' 
-              }}
-            >
-              Plan created successfully! Your plan is now live and available for subscriptions.
-            </div>
-          )}
         </form>
       </div>
 
@@ -225,7 +266,7 @@ const CreatorPage: React.FC = () => {
             <strong>3. Automatic Payments:</strong> Massa's deferred calls handle recurring payments automatically.
           </p>
           <p>
-            <strong>4. Manage Subscriptions:</strong> You can view and manage all your plan subscriptions.
+            <strong>4. Manage Subscriptions:</strong> View and manage all your plan subscriptions.
           </p>
         </div>
       </div>

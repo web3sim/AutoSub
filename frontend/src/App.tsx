@@ -49,18 +49,28 @@ function App() {
   const handleConnectWallet = async () => {
     setIsConnecting(true);
     try {
+      console.log('Checking if Bearby is installed...');
+      
       if (!isBearbyInstalled()) {
-        alert('Bearby wallet is not installed. Please install it from https://bearby.io/');
+        const message = 'Bearby wallet is not installed. Please install it from the Chrome Web Store and refresh the page.';
+        console.error(message);
+        alert(message);
         return;
       }
 
+      console.log('Bearby found, attempting to connect...');
       const connected = await connectWallet();
+      
       if (connected) {
-        checkWalletStatus();
+        console.log('Wallet connected successfully:', connected);
+        await checkWalletStatus();
+      } else {
+        console.warn('Wallet connection returned null');
+        alert('Failed to connect wallet. Please try again.');
       }
     } catch (error: any) {
       console.error('Failed to connect wallet:', error);
-      alert(`Failed to connect wallet: ${error.message}`);
+      alert(`Failed to connect wallet: ${error.message || 'Unknown error'}`);
     } finally {
       setIsConnecting(false);
     }
@@ -77,71 +87,60 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
       {/* Header with Wallet Connection */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Link to="/" className="text-2xl font-bold text-blue-600">
-                AutoSub
-              </Link>
-              <span className="ml-2 text-sm text-gray-500">
-                On-Chain Subscriptions
-              </span>
-            </div>
+      <header className="header">
+        <div className="container">
+          <div className="logo">
+            <Link to="/" className="logo">
+              <h1>AutoSub</h1>
+              <div>
+                <div className="logo-subtitle">On-Chain Subscriptions</div>
+              </div>
+            </Link>
+          </div>
             
             {/* Wallet Connection */}
-            <div className="flex items-center space-x-4">
+            <div className="wallet-section">
               {walletConnected && walletAddress ? (
-                <div className="flex items-center space-x-3">
-                  <div className="text-sm">
-                    <div className="text-gray-600">Connected:</div>
-                    <div className="font-mono text-blue-600">
+                <>
+                  <div className="wallet-info">
+                    <div className="wallet-label">Connected Wallet</div>
+                    <div className="wallet-address">
                       {formatAddress(walletAddress)}
                     </div>
                   </div>
                   <button
                     onClick={handleDisconnectWallet}
-                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm transition-colors"
+                    className="wallet-btn disconnect"
                   >
                     Disconnect
                   </button>
-                </div>
+                </>
               ) : (
                 <button
                   onClick={handleConnectWallet}
                   disabled={isConnecting}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-md text-sm transition-colors"
+                  className="wallet-btn"
                 >
                   {isConnecting ? 'Connecting...' : 'Connect Bearby Wallet'}
                 </button>
               )}
             </div>
-          </div>
         </div>
       </header>
 
       {/* Navigation */}
-      <nav className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8 h-12 items-center">
-            <Link 
-              to="/" 
-              className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
-            >
+      <nav style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)' }}>
+        <div className="container">
+          <div className="nav">
+            <Link to="/" className="nav-link">
               Home
             </Link>
-            <Link 
-              to="/creator" 
-              className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
-            >
+            <Link to="/creator" className="nav-link">
               Create Plans
             </Link>
-            <Link 
-              to="/subscriber" 
-              className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
-            >
+            <Link to="/subscriber" className="nav-link">
               My Subscriptions
             </Link>
           </div>
@@ -149,54 +148,73 @@ function App() {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        {/* Wallet Connection Warning */}
-        {!walletConnected && (
-          <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-md p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-yellow-800">
-                  Wallet Connection Required
-                </h3>
-                <div className="mt-2 text-sm text-yellow-700">
-                  <p>Please connect your Bearby wallet to use AutoSub features. Make sure you have the Bearby browser extension installed.</p>
+      <main className="main">
+        <div className="container">
+          {/* Wallet Connection Warning */}
+          {!walletConnected && (
+            <div className="card" style={{ 
+              backgroundColor: '#fef3c7', 
+              border: '1px solid #f59e0b', 
+              marginBottom: '2rem',
+              padding: '1rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                <div style={{ color: '#f59e0b', marginTop: '0.125rem' }}>
+                  ⚠️
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#92400e', marginBottom: '0.5rem' }}>
+                    🦊 Wallet Connection Required
+                  </h3>
+                  <div style={{ fontSize: '0.875rem', color: '#b45309' }}>
+                    <p>Please connect your <strong>Bearby wallet</strong> to use AutoSub features. Make sure you have the Bearby browser extension installed.</p>
+                    <p style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}>
+                      <a href="https://bearby.io" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                        Download Bearby Extension →
+                      </a>
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <Routes>
-          <Route 
-            path="/" 
-            element={
-              <div>
-                <section className="mb-8 text-center">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-4">On-Chain Subscription Protocol</h2>
-                  <p className="text-lg text-gray-600">
-                    Create and manage recurring subscriptions on Massa Network. 
-                    Fully decentralized, transparent, and automated.
-                  </p>
-                </section>
-                <PlanList />
-              </div>
-            } 
-          />
-          <Route path="/creator" element={<CreatorPage />} />
-          <Route path="/subscriber" element={<SubscriberPage />} />
-        </Routes>
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-white border-t mt-auto">
-        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-sm text-gray-500">
-            AutoSub - Fully On-Chain Subscription Protocol on Massa Network
+          <Routes>
+            <Route 
+              path="/" 
+              element={
+                <div>
+                  <section className="hero">
+                    <h2>On-Chain Subscription Protocol</h2>
+                    <p>
+                      Create and manage recurring subscriptions on Massa Network. 
+                      Fully decentralized, transparent, and automated.
+                    </p>
+                  </section>
+                  <PlanList />
+                </div>
+              } 
+            />
+            <Route path="/creator" element={<CreatorPage />} />
+            <Route path="/subscriber" element={<SubscriberPage />} />
+          </Routes>
+        </div>
+      </main>      {/* Footer */}
+      <footer className="footer">
+        <div className="container">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <p style={{ fontSize: '0.875rem', color: '#64748b', textAlign: 'center' }}>
+              © 2024 AutoSub - Decentralized Subscription Platform
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#64748b' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ height: '8px', width: '8px', backgroundColor: '#10b981', borderRadius: '50%' }}></span>
+                Built on Massa
+              </span>
+              <span style={{ fontSize: '0.75rem' }}>
+                {walletConnected ? '🔗 Connected' : '⚠️ Not Connected'}
+              </span>
+            </div>
           </div>
         </div>
       </footer>

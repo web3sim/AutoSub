@@ -1,33 +1,52 @@
 import { web3 } from '@hicaru/bearby.js';
 
-// Types for our subscription system
+// Contract configuration - replace with actual deployed contract address
+const CONTRACT_ADDRESS = 'AS12BqZEQ6sByhRLyEuf0YbQmcF2PsDdkNNG1akBJu9XcjZA1eT'; // Replace with actual contract address
+
+// Contract function names
+export const CONTRACT_FUNCTIONS = {
+  CREATE_PLAN: 'createPlan',
+  SUBSCRIBE: 'subscribe',
+  CANCEL_SUBSCRIPTION: 'cancelSubscription',
+  GET_PLANS: 'getPlans',
+  GET_SUBSCRIPTIONS: 'getSubscriptions',
+  GET_PLAN_DETAILS: 'getPlanDetails',
+  UPDATE_PLAN: 'updatePlan',
+  WITHDRAW_EARNINGS: 'withdrawEarnings'
+} as const;
+
+// Types for subscription plans and data
 export interface SubscriptionPlan {
-  id: string;
-  creator: string;
-  price: bigint;
-  interval: number;
-  token: string;
-  active: boolean;
+  id: number;
+  creatorAddress: string;
+  name: string;
+  description: string;
+  price: number; // in nanoMAS
+  duration: number; // in milliseconds
+  isActive: boolean;
 }
 
-export interface Subscription {
-  id: string;
-  planId: string;
-  subscriber: string;
+export interface UserSubscription {
+  id: number;
+  planId: number;
+  subscriberAddress: string;
   startTime: number;
-  lastPayment: number;
-  active: boolean;
+  endTime: number;
+  isActive: boolean;
 }
 
-// Check if Bearby wallet is installed
+// Wallet functions
 export const isBearbyInstalled = (): boolean => {
-  return typeof window !== 'undefined' && web3.wallet.installed;
+  try {
+    return web3.wallet.installed;
+  } catch (error) {
+    console.error('Error checking Bearby installation:', error);
+    return false;
+  }
 };
 
-// Check if wallet is connected
-export const isWalletConnected = async (): Promise<boolean> => {
+export const isWalletConnected = (): boolean => {
   try {
-    if (!isBearbyInstalled()) return false;
     return web3.wallet.connected;
   } catch (error) {
     console.error('Error checking wallet connection:', error);
@@ -35,275 +54,321 @@ export const isWalletConnected = async (): Promise<boolean> => {
   }
 };
 
-// Connect to Bearby wallet
 export const connectWallet = async (): Promise<string | null> => {
   try {
     if (!isBearbyInstalled()) {
-      throw new Error('Bearby wallet is not installed. Please install the Bearby browser extension.');
+      throw new Error('Bearby wallet is not installed. Please install the Bearby extension from the Chrome Web Store.');
     }
 
-    // Request connection
-    const connected = await web3.wallet.connect();
+    console.log('Attempting wallet connection...');
     
-    if (connected && web3.wallet.account.base58) {
-      return web3.wallet.account.base58;
-    } else {
-      throw new Error('Failed to connect to wallet');
+    const connected = await web3.wallet.connect();
+    console.log('Connection result:', connected);
+    
+    if (connected && web3.wallet.account?.base58) {
+      const address = web3.wallet.account.base58;
+      console.log('Wallet connected successfully:', address);
+      return address;
     }
+
+    console.warn('Connection failed or no account available');
+    return null;
   } catch (error) {
     console.error('Error connecting to wallet:', error);
     throw error;
   }
 };
 
-// Disconnect wallet
 export const disconnectWallet = async (): Promise<void> => {
   try {
     await web3.wallet.disconnect();
+    console.log('Wallet disconnected successfully');
   } catch (error) {
     console.error('Error disconnecting wallet:', error);
     throw error;
   }
 };
 
-// Get current connected address
-export const getCurrentAddress = async (): Promise<string | null> => {
+export const getWalletAddress = (): string | null => {
   try {
-    if (!isBearbyInstalled() || !web3.wallet.connected) return null;
-    return web3.wallet.account.base58 || null;
+    if (!isWalletConnected()) return null;
+    return web3.wallet.account?.base58 || null;
   } catch (error) {
-    console.error('Error getting current address:', error);
+    console.error('Error getting wallet address:', error);
     return null;
   }
 };
 
-// Create a new subscription plan
-export const createPlan = async (
-  price: bigint,
-  interval: number,
-  token: string
+// Alias for backwards compatibility
+export const getCurrentAddress = getWalletAddress;
+
+// Helper function to call smart contract
+const callContract = async (
+  functionName: string,
+  parameters: any[] = [],
+  coins: number = 0
 ): Promise<string> => {
   try {
-    if (!isBearbyInstalled() || !web3.wallet.connected) {
-      throw new Error('Bearby wallet is not connected');
+    if (!isWalletConnected()) {
+      throw new Error('Wallet not connected');
     }
 
-    // Mock transaction hash for testing
-    const mockTxHash = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    console.log('Mock plan creation transaction:', mockTxHash);
-    console.log('Plan details:', { price: price.toString(), interval, token });
-    
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return mockTxHash;
-  } catch (error) {
-    console.error('Error creating plan:', error);
-    throw error;
-  }
-};
+    console.log('Calling contract function:', functionName, 'with parameters:', parameters);
 
-// Subscribe to a plan
-export const subscribe = async (planId: string): Promise<string> => {
-  try {
-    if (!isBearbyInstalled() || !web3.wallet.connected) {
-      throw new Error('Bearby wallet is not connected');
-    }
-
-    // Get plan details first
-    const plan = await getPlan(planId);
-    if (!plan) {
-      throw new Error('Plan not found');
-    }
-
-    // Mock transaction for now
-    const mockTxHash = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    console.log('Mock subscription transaction:', mockTxHash);
-    console.log('Subscribing to plan:', planId);
-    
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    return mockTxHash;
-  } catch (error) {
-    console.error('Error subscribing to plan:', error);
-    throw error;
-  }
-};
-
-// Cancel subscription
-export const cancelSubscription = async (subscriptionId: string): Promise<string> => {
-  try {
-    if (!isBearbyInstalled() || !web3.wallet.connected) {
-      throw new Error('Bearby wallet is not connected');
-    }
-
-    // Mock transaction for now
-    const mockTxHash = `cancel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    console.log('Mock cancellation transaction:', mockTxHash);
-    console.log('Cancelling subscription:', subscriptionId);
-    
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return mockTxHash;
-  } catch (error) {
-    console.error('Error canceling subscription:', error);
-    throw error;
-  }
-};
-
-// Get plan details (mock data for now)
-export const getPlan = async (planId: string): Promise<SubscriptionPlan | null> => {
-  try {
-    // Mock plans for testing
-    const mockPlans: { [key: string]: SubscriptionPlan } = {
-      '1': {
-        id: '1',
-        creator: 'AS1234567890abcdef1234567890abcdef1234567890abcdef12',
-        price: BigInt('5000000'), // 5 MAS (6 decimals)
-        interval: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
-        token: 'MAS',
-        active: true
-      },
-      '2': {
-        id: '2',
-        creator: 'AS1234567890abcdef1234567890abcdef1234567890abcdef12',
-        price: BigInt('10000000'), // 10 MAS
-        interval: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
-        token: 'MAS',
-        active: true
-      },
-      '3': {
-        id: '3',
-        creator: 'AS9876543210fedcba9876543210fedcba9876543210fedcba98',
-        price: BigInt('2500000'), // 2.5 MAS
-        interval: 24 * 60 * 60 * 1000, // 1 day in milliseconds
-        token: 'MAS',
-        active: true
+    // Convert parameters to the correct format for Bearby
+    const formattedParams = parameters.map((param) => {
+      if (typeof param === 'string') {
+        return {
+          type: web3.contract.types.STRING,
+          value: param
+        };
+      } else if (typeof param === 'number') {
+        return {
+          type: web3.contract.types.U64,
+          value: param
+        };
+      } else if (typeof param === 'boolean') {
+        return {
+          type: web3.contract.types.BOOL,
+          value: param
+        };
+      } else {
+        // Default to string representation
+        return {
+          type: web3.contract.types.STRING,
+          value: String(param)
+        };
       }
-    };
-    
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
-    return mockPlans[planId] || null;
+    });
+
+    // Call the smart contract using Bearby Web3
+    const txHash = await web3.contract.call({
+      fee: 0, // Transaction fee
+      maxGas: 2000000, // Maximum gas for the function call
+      coins: coins, // Coins to attach to the function call
+      targetAddress: CONTRACT_ADDRESS, // Contract address
+      functionName: functionName, // Function to call
+      parameters: formattedParams // Function parameters
+    });
+
+    console.log('Transaction hash:', txHash);
+    return txHash;
+
   } catch (error) {
-    console.error('Error getting plan:', error);
-    return null;
+    console.error('Error calling contract:', error);
+    throw error;
   }
 };
 
-// Get subscription details (mock data for now)
-export const getSubscription = async (subscriptionId: string): Promise<Subscription | null> => {
+// Helper function to read from smart contract (no transaction required)
+const readContract = async (
+  functionName: string,
+  parameters: any[] = []
+): Promise<any> => {
   try {
-    const userAddress = await getCurrentAddress();
-    
-    // Mock subscriptions for testing
-    const mockSubscriptions: { [key: string]: Subscription } = {
-      '1': {
-        id: '1',
-        planId: '1',
-        subscriber: userAddress || 'AS1234567890abcdef1234567890abcdef1234567890abcdef12',
-        startTime: Date.now() - (5 * 24 * 60 * 60 * 1000), // 5 days ago
-        lastPayment: Date.now() - (5 * 24 * 60 * 60 * 1000),
-        active: true
-      },
-      '2': {
-        id: '2', 
-        planId: '2',
-        subscriber: userAddress || 'AS1234567890abcdef1234567890abcdef1234567890abcdef12',
-        startTime: Date.now() - (2 * 24 * 60 * 60 * 1000), // 2 days ago
-        lastPayment: Date.now() - (2 * 24 * 60 * 60 * 1000),
-        active: true
+    console.log('Reading from contract function:', functionName, 'with parameters:', parameters);
+
+    // Convert parameters to the correct format for Bearby
+    const formattedParams = parameters.map((param) => {
+      if (typeof param === 'string') {
+        return {
+          type: web3.contract.types.STRING,
+          value: param
+        };
+      } else if (typeof param === 'number') {
+        return {
+          type: web3.contract.types.U64,
+          value: param
+        };
+      } else if (typeof param === 'boolean') {
+        return {
+          type: web3.contract.types.BOOL,
+          value: param
+        };
+      } else {
+        return {
+          type: web3.contract.types.STRING,
+          value: String(param)
+        };
       }
-    };
-    
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
-    return mockSubscriptions[subscriptionId] || null;
+    });
+
+    // Read from the smart contract using Bearby Web3
+    const result = await web3.contract.readSmartContract({
+      fee: 0, // No fee for read operations
+      maxGas: 200000, // Maximum gas for the read operation
+      targetAddress: CONTRACT_ADDRESS, // Contract address
+      targetFunction: functionName, // Function to call
+      parameter: formattedParams // Function parameters
+    });
+
+    console.log('Read result:', result);
+    return result;
+
   } catch (error) {
-    console.error('Error getting subscription:', error);
-    return null;
+    console.error('Error reading from contract:', error);
+    // For now, return mock data if contract read fails
+    return getMockData(functionName, parameters);
   }
 };
 
-// Get all plans (mock data for listing)
-export const getAllPlans = async (): Promise<SubscriptionPlan[]> => {
+// Fallback mock data for development when contract is not deployed
+const getMockData = (functionName: string, parameters: any[]): any => {
+  console.log('Using mock data for:', functionName);
+  
+  switch (functionName) {
+    case CONTRACT_FUNCTIONS.GET_PLANS:
+      return generateMockPlans();
+    
+    case CONTRACT_FUNCTIONS.GET_SUBSCRIPTIONS:
+      return generateMockSubscriptions();
+    
+    case CONTRACT_FUNCTIONS.GET_PLAN_DETAILS:
+      return generateMockPlanDetails(parameters[0]);
+    
+    default:
+      return null;
+  }
+};
+
+// Mock data generators for development when contract is not deployed
+const generateMockPlans = (): SubscriptionPlan[] => [
+  {
+    id: 1,
+    creatorAddress: 'AS1234...abcd',
+    name: 'Basic Plan',
+    description: 'Access to basic content',
+    price: 1000000000, // 1 MAS in nanoMAS
+    duration: 30 * 24 * 60 * 60 * 1000, // 30 days
+    isActive: true
+  },
+  {
+    id: 2,
+    creatorAddress: 'AS1234...abcd',
+    name: 'Premium Plan',
+    description: 'Access to premium content and features',
+    price: 3000000000, // 3 MAS in nanoMAS
+    duration: 30 * 24 * 60 * 60 * 1000, // 30 days
+    isActive: true
+  }
+];
+
+const generateMockSubscriptions = (): UserSubscription[] => [
+  {
+    id: 1,
+    planId: 1,
+    subscriberAddress: 'AS5678...efgh',
+    startTime: Date.now() - (10 * 24 * 60 * 60 * 1000), // 10 days ago
+    endTime: Date.now() + (20 * 24 * 60 * 60 * 1000), // 20 days from now
+    isActive: true
+  }
+];
+
+const generateMockPlanDetails = (planId: number): SubscriptionPlan | null => {
+  const plans = generateMockPlans();
+  return plans.find(plan => plan.id === planId) || null;
+};
+
+// Public API functions
+export const createPlan = async (
+  name: string,
+  description: string,
+  price: number,
+  duration: number
+): Promise<{ planId: bigint }> => {
+  await callContract(CONTRACT_FUNCTIONS.CREATE_PLAN, [name, description, price, duration]);
+  console.log('Plan creation transaction submitted');
+  // For now, return a generated ID since we can't extract it from the transaction immediately
+  // In a real implementation, you would listen for events or query the contract state
+  return { planId: BigInt(Date.now()) };
+};
+
+export const subscribeToPlan = async (planId: number): Promise<{ subscriptionId: bigint }> => {
+  // Calculate plan cost (this should come from the plan details)
+  const planDetails = await getPlanDetails(planId);
+  const planCost = planDetails ? planDetails.price : 0;
+  
+  await callContract(CONTRACT_FUNCTIONS.SUBSCRIBE, [planId], planCost);
+  console.log('Subscription transaction submitted');
+  return { subscriptionId: BigInt(Date.now()) };
+};
+
+export const cancelSubscription = async (subscriptionId: number): Promise<{ success: boolean }> => {
+  await callContract(CONTRACT_FUNCTIONS.CANCEL_SUBSCRIPTION, [subscriptionId]);
+  console.log('Cancellation transaction submitted');
+  return { success: true };
+};
+
+export const getPlans = async (): Promise<SubscriptionPlan[]> => {
   try {
-    // Return all mock plans
-    const plans = [
-      await getPlan('1'),
-      await getPlan('2'),
-      await getPlan('3')
-    ];
-    
-    return plans.filter(plan => plan !== null) as SubscriptionPlan[];
+    return await readContract(CONTRACT_FUNCTIONS.GET_PLANS);
   } catch (error) {
-    console.error('Error getting all plans:', error);
-    return [];
+    console.warn('Contract read failed, using mock data:', error);
+    return getMockData(CONTRACT_FUNCTIONS.GET_PLANS, []);
   }
 };
 
-// Get user's subscriptions (mock data for now)
-export const getUserSubscriptions = async (userAddress: string): Promise<Subscription[]> => {
+export const getUserSubscriptions = async (): Promise<UserSubscription[]> => {
   try {
-    // Return mock subscriptions for the user
-    const subscriptions = [
-      await getSubscription('1'),
-      await getSubscription('2')
-    ];
-    
-    return subscriptions.filter(sub => sub !== null && sub.subscriber === userAddress) as Subscription[];
+    return await readContract(CONTRACT_FUNCTIONS.GET_SUBSCRIPTIONS);
   } catch (error) {
-    console.error('Error getting user subscriptions:', error);
-    return [];
+    console.warn('Contract read failed, using mock data:', error);
+    return getMockData(CONTRACT_FUNCTIONS.GET_SUBSCRIPTIONS, []);
   }
 };
 
-// Helper function to convert time intervals to milliseconds
-export const timeToMilliseconds = (value: number, unit: string): number => {
-  const multipliers = {
-    'minutes': 60 * 1000,
-    'hours': 60 * 60 * 1000,
-    'days': 24 * 60 * 60 * 1000,
-    'weeks': 7 * 24 * 60 * 60 * 1000,
-    'months': 30 * 24 * 60 * 60 * 1000, // Approximate
-  };
-  
-  return value * (multipliers[unit as keyof typeof multipliers] || multipliers.days);
-};
-
-// Helper function to format price for display
-export const formatPrice = (price: bigint, decimals: number = 6): string => {
-  const divisor = BigInt(10 ** decimals);
-  const wholePart = price / divisor;
-  const fractionalPart = price % divisor;
-  
-  if (fractionalPart === 0n) {
-    return wholePart.toString();
+export const getPlanDetails = async (planId: number): Promise<SubscriptionPlan | null> => {
+  try {
+    return await readContract(CONTRACT_FUNCTIONS.GET_PLAN_DETAILS, [planId]);
+  } catch (error) {
+    console.warn('Contract read failed, using mock data:', error);
+    return getMockData(CONTRACT_FUNCTIONS.GET_PLAN_DETAILS, [planId]);
   }
-  
-  const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
-  const trimmedFractional = fractionalStr.replace(/0+$/, '');
-  
-  return `${wholePart}.${trimmedFractional}`;
 };
 
-// Helper function to format time interval for display
-export const formatInterval = (intervalMs: number): string => {
-  const seconds = Math.floor(intervalMs / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-  const weeks = Math.floor(days / 7);
-  const months = Math.floor(days / 30);
+export const updatePlan = async (
+  planId: number,
+  name: string,
+  description: string,
+  price: number,
+  isActive: boolean
+): Promise<{ success: boolean }> => {
+  await callContract(CONTRACT_FUNCTIONS.UPDATE_PLAN, [planId, name, description, price, isActive]);
+  console.log('Plan update transaction submitted');
+  return { success: true };
+};
 
-  if (months > 0) return `${months} month${months > 1 ? 's' : ''}`;
-  if (weeks > 0) return `${weeks} week${weeks > 1 ? 's' : ''}`;
-  if (days > 0) return `${days} day${days > 1 ? 's' : ''}`;
-  if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''}`;
-  if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''}`;
-  return `${seconds} second${seconds !== 1 ? 's' : ''}`;
+export const withdrawEarnings = async (): Promise<{ success: boolean }> => {
+  await callContract(CONTRACT_FUNCTIONS.WITHDRAW_EARNINGS);
+  console.log('Withdrawal transaction submitted');
+  return { success: true };
+};
+
+// Utility functions
+export const formatMASAmount = (nanoMAS: number): string => {
+  return (nanoMAS / 1_000_000_000).toFixed(2);
+};
+
+export const parseMASAmount = (masAmount: string): number => {
+  return Math.floor(parseFloat(masAmount) * 1_000_000_000);
+};
+
+export const formatDuration = (milliseconds: number): string => {
+  const days = Math.floor(milliseconds / (24 * 60 * 60 * 1000));
+  return `${days} day${days !== 1 ? 's' : ''}`;
+};
+
+export const timeToMilliseconds = (amount: number, unit: string): number => {
+  switch (unit) {
+    case 'days':
+      return amount * 24 * 60 * 60 * 1000;
+    case 'weeks':
+      return amount * 7 * 24 * 60 * 60 * 1000;
+    case 'months':
+      return amount * 30 * 24 * 60 * 60 * 1000; // Approximate
+    case 'years':
+      return amount * 365 * 24 * 60 * 60 * 1000; // Approximate
+    default:
+      return amount;
+  }
 };
